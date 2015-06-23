@@ -12,10 +12,6 @@ def main():
 
     # TODO: Grab the file name to stream from the command line arguments
     # TODO: Check to see if a TCP client is connected before starting data transmit
-    # Start datastreaming, but spin it off into its own thread with a queue for thread safety
-    #t = threading.Thread(target=interface.start_datastreaming)
-    #t.daemon = True
-    #t.start()
 
     # Where our client UI will connect
     HOST, PORT = "localhost", 9999
