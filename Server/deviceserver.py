@@ -5,7 +5,7 @@ import time
 import socket
 import socketserver
 
-#input_file = None
+input_file = None
 
 def main(argv):
     """
