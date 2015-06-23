@@ -1,25 +1,42 @@
-import glob
-import os
-import platform
-import sys
+#!/usr/bin/env python
+
+import sys, getopt
 import time
 import socket
 import socketserver
 
+#input_file = None
 
-def main():
-    """Just here to help us test the code incrementally"""    
+def main(argv):
+    """
+    Sets up and starts our TCP data server
+    """
 
-    # TODO: Grab the file name to stream from the command line arguments
-    # TODO: Check to see if a TCP client is connected before starting data transmit
+    # Get our command line options and arguments, and warn the user of incorrect usage
+    try:
+        opts, args = getopt.getopt(argv, "hf:")
+    except getopt.GetoptError:
+        print 'deviceserver.py -f <inputfile>'
+        sys.exit(2)
+
+    # Handle the command line options and their arguments
+    for opt, arg in opts:
+        if opt == '-h':
+            print 'deviceserver.py -f <inputfile>'
+            print 'Example: deviceserver.py -f 2013_6_11_15_8_37.csv'
+            print '-f: Specifies the Shepard data file to serve to the client(s)'
+            sys.exit()
+        elif opt == '-f':
+            global input_file
+            input_file = arg
 
     # Where our client UI will connect
     HOST, PORT = "localhost", 9999
 
-    # Create the server, binding to localhost on port 9999
+    # Create the server, binding to localhost on the given port
     server = socketserver.TCPServer((HOST, PORT), TCPHandler)
 
-    # TODO: Doesn't seem to help with a SocketServer object
+    # Doesn't seem to necessarily help with a SocketServer object
     # Make sure we don't get locked out of the port when hitting CTRL-C
     server.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
 
@@ -30,7 +47,9 @@ def main():
 
 
 class TCPHandler(socketserver.BaseRequestHandler):
-    """Handles TCP requests from our client UI."""
+    """
+    Handles TCP requests from our client UI
+    """
 
     in_data = None  # The data coming from the client
 
@@ -42,11 +61,34 @@ class TCPHandler(socketserver.BaseRequestHandler):
 
             # Check to see if the client is ready for data streaming
             if self.in_data.decode("utf-8") == "R":
-                # TODO: Open the data file for reading
+                # Open the data file for reading
+                f = open(input_file, 'r')
+
+                last_time = -1.0
+
                 # Begin streaming the data to the client
-                # while True:  # TODO: Send until the end of the file has been reached
-                for i in range(0, 10, 1):
-                    self.request.sendall(bytes('1.0, 10.0, 100.0\n0.0020,0.44877097,0.0\n0.0040,0.51908207,0.0\n0.0060,0.6597041,0.0\n0.0080,0.7300151,0.0\n0.011,0.8706371,0.0\n0.013,1.327659,0.0\n0.015,1.4331257,0.0\n0.018,1.5737478,0.0\n0.02,1.7143698,0.0\n0.022,2.1713917,0.0\n'))
+                for line in f:
+                    # Skip the first header line
+                    if line.split(',')[0][0] == 'T':
+                        continue
+
+                    # The line contains the timestamp
+                    cur_time = float(line.split(',')[0])
+
+                    # Pull the amount of delay into the send dictated by the timestamps
+                    if last_time == -1.0:
+                        delay = 0.0
+                    else:
+                        # The delay between our samples (could vary depending on orig data speeds)
+                        delay = cur_time - last_time
+
+                    # Add the appropriate amount of delay
+                    time.sleep(delay)
+
+                    # Set up for the next round
+                    last_time = cur_time
+
+                    self.request.sendall(bytes(line))
 
 if __name__ == "__main__":
-    main()
+    main(sys.argv[1:])
