@@ -3,7 +3,7 @@
 import sys, getopt
 import time
 import socket
-import SocketServer
+import socketserver
 
 input_file = None
 
@@ -34,7 +34,7 @@ def main(argv):
     HOST, PORT = "localhost", 9999
 
     # Create the server, binding to localhost on the given port
-    server = SocketServer.TCPServer((HOST, PORT), TCPHandler)
+    server = socketserver.TCPServer((HOST, PORT), TCPHandler)
 
     # Doesn't seem to necessarily help with a SocketServer object
     # Make sure we don't get locked out of the port when hitting CTRL-C
@@ -46,7 +46,7 @@ def main(argv):
     server.serve_forever()
 
 
-class TCPHandler(SocketServer.BaseRequestHandler):
+class TCPHandler(socketserver.BaseRequestHandler):
     """
     Handles TCP requests from our client UI
     """
