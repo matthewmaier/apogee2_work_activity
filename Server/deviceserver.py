@@ -1,16 +1,18 @@
 #!/usr/bin/env python
 
-import sys, getopt
+import sys, getopt, os
 import time
 import socket
 import SocketServer
 
 input_file = None
+server = None
 
 def main(argv):
     """
     Sets up and starts our TCP data server
     """
+    global server
 
     # Get our command line options and arguments, and warn the user of incorrect usage
     try:
@@ -45,6 +47,8 @@ def main(argv):
     # Activate the server; this will keep running until you interrupt the program with Ctrl-C
     server.serve_forever()
 
+    sys.exit(0)
+
 
 class TCPHandler(SocketServer.BaseRequestHandler):
     """
@@ -52,6 +56,7 @@ class TCPHandler(SocketServer.BaseRequestHandler):
     """
 
     in_data = None  # The data coming from the client
+    f = None  # The file that we're streaming to the client
 
     def handle(self):
        # Don't dump our client after the first send
@@ -62,12 +67,12 @@ class TCPHandler(SocketServer.BaseRequestHandler):
             # Check to see if the client is ready for data streaming
             if self.in_data.decode("utf-8") == "R":
                 # Open the data file for reading
-                f = open(input_file, 'r')
+                self.f = open(input_file, 'r')
 
                 last_time = -1.0
 
                 # Begin streaming the data to the client
-                for line in f:
+                for line in self.f:
                     # Skip the first header line
                     if line.split(',')[0][0] == 'T':
                         continue
@@ -89,6 +94,22 @@ class TCPHandler(SocketServer.BaseRequestHandler):
                     last_time = cur_time
 
                     self.request.sendall(bytes(line))
+            elif self.in_data.decode("utf-8") == "Q":
+                global server
+
+                print("Shutting down server.")
+
+                # Clean up after ourselves and exit
+                if self.f is not None:
+                    self.f.close()
+
+                # TODO: This should work, but usually hangs waiting for the server to shutdown
+                # Attempt to gracefully shut the server down
+                #server.shutdown()
+
+                # Do a hard exit since this will be running in another thread
+                os._exit(0)
+
 
 if __name__ == "__main__":
     main(sys.argv[1:])
